@@ -1,0 +1,11 @@
+TODO:  
+
+- Allow linking of a previously linked tree.
+- Make sure that binding map cannot have a star edge
+  pointing to itself.
+
+NOTES:
+
+- Linking succeeds when all local bindings are resolved.
+- Linking errors should be isolated by module, so that subsequent
+  tries can succeed.
