@@ -3,7 +3,7 @@ module Path from "node:path";
 import { Module } from "../src/Module.js";
 import { buildTree } from "../src/TreeBuilder.js";
 import { link } from "../src/Linker.js";
-import { runTests } from "moon-unit.js";
+import { runTests } from "http://jscloud.org/zenparsing/moon-unit-0.1.js";
 
 function compile(path) {
 
@@ -60,6 +60,35 @@ runTests({
                 a: { module: '[basic-cycle/a.js]', name: 'a', color: 'GREEN' },
                 c: { module: '[basic-cycle/main.js]', name: 'c', color: 'GREEN' }
             });
+        });
+    },
+    
+    "Export All"(test) {
+    
+        return compile("export-all/main.js").then(module => {
+        
+            test
+            
+            ._("exports").equals(getBindings(module.exports), {
+                a: { module: '[export-all/main.js]', name: 'x', color: 'GREEN' },
+                y: { module: '[export-all/main.js]', name: 'y', color: 'GREEN' },
+                z: { module: '[export-all/main.js]', name: 'z', color: 'GREEN' },
+                f: { module: '[export-all/main.js]', name: 'f', color: 'GREEN' },
+                g: { module: '[export-all/main.js]', name: 'g', color: 'GREEN' },
+                C: { module: '[export-all/main.js]', name: 'C', color: 'GREEN' },
+                M: { module: '[export-all/main.js]', name: 'M', color: 'GREEN' }
+            })
+            
+            ._("locals").equals(getBindings(module.localBindings), {
+                x: { module: '[export-all/main.js]', name: 'x', color: 'GREEN' },
+                y: { module: '[export-all/main.js]', name: 'y', color: 'GREEN' },
+                z: { module: '[export-all/main.js]', name: 'z', color: 'GREEN' },
+                f: { module: '[export-all/main.js]', name: 'f', color: 'GREEN' },
+                g: { module: '[export-all/main.js]', name: 'g', color: 'GREEN' },
+                C: { module: '[export-all/main.js]', name: 'C', color: 'GREEN' },
+                M: { module: '[export-all/main.js]', name: 'M', color: 'GREEN' }
+            });
+            
         });
     },
     
@@ -121,6 +150,14 @@ runTests({
         }, error => {
         
             test.assert(true);
+        });
+    },
+    
+    "Nested Modules"(test) {
+    
+        return compile("nested/main.js").then(module => {
+        
+            console.log(getBindings(module.exports));
         });
     }
 

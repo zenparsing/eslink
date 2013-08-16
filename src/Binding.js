@@ -5,7 +5,8 @@ export var
     BLACK = "BLACK",
     GREEN = "GREEN",
     YELLOW = "YELLOW",
-    RED = "RED";
+    RED = "RED",
+    REFLEXIVE = "|";
 
 export class BindingEdge {
 

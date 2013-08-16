@@ -10,7 +10,8 @@ import {
     BLACK,
     YELLOW,
     GREEN,
-    RED
+    RED,
+    REFLEXIVE
 
 } from "Binding.js";
 
@@ -93,6 +94,9 @@ export function link(rootModule) {
     
     function createStarEdges(from, to) {
     
+        if (from === to)
+            return;
+        
         from.addStarEdge(to);
         
         from.forEach((binding, name) => {
@@ -191,7 +195,8 @@ function buildGraph(module) {
     var targets = module.bindingTargets,
         locals = module.localBindings,
         exports = module.exports,
-        moduleRefs = new BindingMap;
+        moduleRefs = new BindingMap,
+        exportAll = false;
     
     function visit(node, topLevel, exporting) {
     
@@ -243,8 +248,8 @@ function buildGraph(module) {
                     
                     if (!node.from) {
                     
-                        // TODO: export *;
-                        throw new Error("TODO");
+                        // export *;
+                        exportAll = true;
                         
                     } else {
                     
@@ -361,8 +366,11 @@ function buildGraph(module) {
     
         var m = module.searchScope(name);
         
-        if (!m)
+        if (!m) {
+        
+            console.log(module.parent.children.get("M").children);
             throw new Error("Invalid module reference: " + name);
+        }
         
         return m;
     }
@@ -379,6 +387,15 @@ function buildGraph(module) {
             
             ref.edges.forEach(edge => target.addEdge(edge));
         });
+        
+        if (exportAll) {
+        
+            locals.forEach((binding, name) => {
+            
+                if (binding.edges.length === 0 && name !== REFLEXIVE)
+                    binding.createEdge(exports.addNew(name));
+            });
+        }
     }
     
     module.children.forEach(buildGraph);

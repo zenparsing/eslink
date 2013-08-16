@@ -1,5 +1,5 @@
 import { StringMap } from "StringMap.js";
-import { BindingMap } from "Binding.js";
+import { BindingMap, REFLEXIVE } from "Binding.js";
 
 export class Module {
 
@@ -15,11 +15,11 @@ export class Module {
         this.dependencies = null;
         
         // Initialize reflexive binding
-        this.bindingTargets.set("|", { type: "module", module: this });
-        this.localBindings.add("|").resolve(this, "|");
+        this.bindingTargets.set(REFLEXIVE, { type: "module", module: this });
+        this.localBindings.add(REFLEXIVE).resolve(this, REFLEXIVE);
     }
     
-    get reflexiveBinding() { return this.localBindings.get("|"); }
+    get reflexiveBinding() { return this.localBindings.get(REFLEXIVE); }
     
     addChild(name, child) {
     

@@ -54,29 +54,6 @@ export function buildTree(startPath) {
     return promise;
 }
 
-function sort(root, startPath) {
-
-    var visited = new StringSet,
-        list = [];
-    
-    function visit(path) {
-    
-        if (visited.has(path))
-            return;
-        
-        visited.add(path);
-        
-        var module = root.children.get(Module.stringName(path));
-        
-        module.dependencies.forEach(visit);
-        list.push(module);
-    }
-    
-    visit(startPath);
-    
-    return list;
-}
-
 function analyze(module, resolvePath) {
 
     var edges = new StringSet;
@@ -89,7 +66,8 @@ function analyze(module, resolvePath) {
                 
                 parent = parent.addChild(node.ident.value);
                 parent.ast = node.body;
-                return;
+                node = node.body;
+                break;
         
             case "ExportSpecifierSet":
             case "ImportDeclaration":
