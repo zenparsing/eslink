@@ -1,12 +1,22 @@
 module Path from "node:path";
 
-import { readFile } from "AsyncFS.js";
-import { parseModule, forEachChild } from "Parser.js";
+import { parseModule, forEachChild } from "package:es6parse";
 import { Module } from "Module.js";
-import { Promise } from "Promise.js";
-import { StringSet } from "StringSet.js";
+import { isPackageURI, locatePackage } from "PackageLocator.js";
+import { AsyncFS, StringMap, StringSet } from "package:zen-bits";
 
 var EXTERNAL_URL = /[a-z][a-z]+:/i;
+
+function resolveURI(path, dir) {
+
+    if (isPackageURI(path))
+        return locatePackage(path);
+    
+    if (EXTERNAL_URL.test(path))
+        return Promise.resolve(path);
+    
+    return Promise.resolve(Path.resolve(dir, path));
+}
 
 export function buildTree(startPath) {
 
@@ -16,47 +26,56 @@ export function buildTree(startPath) {
         visited = new StringSet,
         pending = 0,
         resolver,
-        promise = new Promise(r => resolver = r);
+        promise = new Promise((resolve, reject) => resolver = { resolve, reject });
     
-    function visit(path) {
+    function visit(uri, baseURI, resolveMap) {
 
-        if (visited.has(path))
-            return;
+        ++pending;
+        
+        return resolveURI(uri, baseURI).then(path => {
+        
+            if (resolveMap)
+                resolveMap.set(uri, path);
             
-        visited.add(path);
-        pending += 1;
-        
-        var dir = Path.dirname(path),
-            resolvePath = p => EXTERNAL_URL.test(p) ? null : Path.resolve(dir, p);
-        
-        readFile(path, { encoding: "utf8" }).then(code => {
+            if (visited.has(path))
+                return;
+            
+            visited.add(path);
+            
+            return AsyncFS
+            .readFile(path, { encoding: "utf8" })
+            .then(code => code, err => null)
+            .then(code => {
     
-            var node = root.addChild(Module.stringName(path));
+                var node = root.addChild(Module.stringName(path)),
+                    base = Path.dirname(path),
+                    depMap;
             
-            node.ast = parseModule(code);
-            node.dependencies = analyze(node, resolvePath);
-            node.dependencies.forEach(visit);
+                if (code !== null) {
             
-            pending -= 1;
+                    node.ast = parseModule(code);
+                    node.dependencies = depMap = analyze(node);
+                    
+                    depMap.keys().forEach(key => visit(key, base, depMap));
+                }
             
-            if (pending === 0)
-                resolver.resolve(root);
+            });
             
-        }).catch(err => {
+        }).then($=> {
         
-            resolver.reject(err);
-            
+            if (--pending === 0)
+                resolver.resolve(root);
         });
     }
     
-    visit(startPath);
+    visit(startPath, "", null);
     
     return promise;
 }
 
-function analyze(module, resolvePath) {
+function analyze(module) {
 
-    var edges = new StringSet;
+    var edges = new StringMap;
     
     function visit(node, parent) {
         
@@ -64,14 +83,14 @@ function analyze(module, resolvePath) {
         
             case "ModuleDeclaration":
                 
-                parent = parent.addChild(node.ident.value);
+                parent = parent.addChild(node.identifier.value);
                 parent.ast = node.body;
                 node = node.body;
                 break;
         
-            case "ExportSpecifierSet":
+            case "ExportsList":
             case "ImportDeclaration":
-            case "ModuleFromDeclaration":
+            case "ModuleImport":
                 
                 addEdge(node.from);
                 break;
@@ -93,15 +112,13 @@ function analyze(module, resolvePath) {
         if (!spec || spec.type !== "String")
             return;
         
-        var path = resolvePath(spec.value);
-        
-        spec.resolvedPath = path;
+        var path = spec.value;
         
         if (path && !edges.has(path))
-            edges.add(path);
+            edges.set(path, null);
     }
     
     visit(module.ast, module);
     
-    return edges.keys();
+    return edges;
 }

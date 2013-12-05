@@ -1,4 +1,4 @@
-import { StringMap } from "StringMap.js";
+import { StringMap } from "package:zen-bits";
 
 export var
     GRAY = "GRAY",
@@ -33,6 +33,7 @@ export class Binding {
         // The binding target
         this.targetModule = null;
         this.targetName = null;
+        this.imported = false;
         
         if (this.map)
             this.map.unresolved += 1;

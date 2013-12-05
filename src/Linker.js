@@ -1,4 +1,4 @@
-import { forEachChild as forEachAST } from "Parser.js";
+import { forEachChild as forEachAST } from "package:es6parse";
 import { Module } from "Module.js";
 
 import {
@@ -23,6 +23,22 @@ class StarBinding extends Binding {
         super();
         this.targetMap = targetMap;
     }
+}
+
+function isVarScope(node) {
+
+    switch (node.type) {
+    
+        case "ClassExpression":
+        case "ClassBody":
+        case "FunctionExpression":
+        case "GeneratorExpression":
+        case "FormalParameter":
+        case "FunctionBody":
+            return true;
+    }
+    
+    return false;
 }
 
 export function link(rootModule) {
@@ -175,11 +191,13 @@ export function link(rootModule) {
         });
         
         // Test for validity
+        /*
         module.localBindings.forEach(binding => {
         
             if (!binding.resolved || binding.color === RED)
                 throw new Error("Unresolved binding.");
         });
+        */
         
         module.children.forEach(finalize);
     }
@@ -195,40 +213,44 @@ function buildGraph(module) {
     var targets = module.bindingTargets,
         locals = module.localBindings,
         exports = module.exports,
+        imports = module.imports,
         moduleRefs = new BindingMap,
         exportAll = false;
     
     function visit(node, topLevel, exporting) {
     
+        if (isVarScope(node))
+            return;
+        
         var binding, path;
         
         switch (node.type) {
         
             // let x; const x; var x;
             case "VariableDeclaration":
-                if (topLevel || node.keyword === "var") getVariables(node, exporting);
+                if (topLevel || node.kind === "var") getVariables(node, exporting);
                 return;
             
             // function F() {}
             case "FunctionDeclaration":
-                addTarget(node.ident.value, exporting, { type: "function" });
+                addTarget(node.identifier.value, exporting, { type: "function" });
                 return;
             
             // class C {}
             case "ClassDeclaration":
-                addTarget(node.ident.value, exporting, { type: "class" });
+                addTarget(node.identifier.value, exporting, { type: "class" });
                 return;
             
             // module A {}
             case "ModuleDeclaration":
-                addTarget(node.ident.value, exporting, { type: "module", module: lookupModule(node.ident.value) });
+                addTarget(node.identifier.value, exporting, { type: "module", module: lookupModule(node.identifier.value) });
                 return;
             
             // module A from "foo";
-            case "ModuleFromDeclaration":
+            case "ModuleImport":
             
                 moduleRefs.add(moduleName(node.from)).createEdge(
-                    locals.addNew(node.ident.value),
+                    locals.addNew(node.identifier.value),
                     []);
 
                 return;
@@ -237,28 +259,20 @@ function buildGraph(module) {
             case "ModuleAlias":
             
                 moduleRefs.add(moduleName(node.path)).createEdge(
-                    locals.addNew(node.ident.value), 
+                    locals.addNew(node.identifier.value), 
                     modulePath(node.path).slice(1));
                     
                 return;
             
-            case "ExportSpecifierSet":
+            case "ExportsList":
                 
                 if (!node.specifiers) {
-                    
-                    if (!node.from) {
-                    
-                        // export *;
-                        exportAll = true;
-                        
-                    } else {
-                    
-                        // export * from "foo";
-                        // export * from A.B;
-                        moduleRefs.add(moduleName(node.from)).createEdge(
-                            new StarBinding(exports), 
-                            modulePath(node.from).slice(1));
-                    }
+                
+                    // export * from "foo";
+                    // export * from A.B;
+                    moduleRefs.add(moduleName(node.from)).createEdge(
+                        new StarBinding(exports), 
+                        modulePath(node.from).slice(1));
                 
                 } else {
                 
@@ -274,7 +288,7 @@ function buildGraph(module) {
                 
             case "ExportDeclaration":
             
-                if (node.binding.type !== "ExportSpecifierSet") {
+                if (node.binding.type !== "ExportsList") {
                 
                     // export [declaration];
                     forEachAST(node, child => visit(child, topLevel, true));
@@ -295,24 +309,24 @@ function buildGraph(module) {
                     var importPath = path.slice(1);
                     importPath.push(spec.remote.value);
                     
-                    binding.createEdge(
-                        locals.addNew((spec.local || spec.remote).value), 
-                        importPath);
+                    var local = locals.addNew((spec.local || spec.remote).value);
+                    local.imported = true;
+                    
+                    binding.createEdge(local, importPath);
                 });
                 
+                break;
+            
+            // TODO:
+            case "ImportDefaultDeclaration":
+            
+                // import x from "foo";
+                // import x from A.B;
                 break;
             
             case "Block":
                 topLevel = false;
                 break;
-        
-            // TODO: Improve case handling
-            case "ClassExpression":
-            case "ClassBody":
-            case "FunctionExpression":
-            case "FormalParameter":
-            case "FunctionBody":
-                return;
         }
         
         forEachAST(node, child => visit(child, topLevel));
@@ -320,6 +334,9 @@ function buildGraph(module) {
     
     function getVariables(node, exporting) {
     
+        if (isVarScope(node))
+            return;
+        
         if (node.type === "Identifier" && node.context === "declaration")
             addTarget(node.value, exporting, { type: "variable" });
         
@@ -336,6 +353,11 @@ function buildGraph(module) {
             local.createEdge(exports.addNew(name));
     }
     
+    function getResolvedName(name) {
+    
+        return module.dependencies.get(name) || "";
+    }
+    
     function moduleName(node) {
     
         switch (node.type) {
@@ -344,7 +366,7 @@ function buildGraph(module) {
                 return node.value;
             
             case "String":
-                return Module.stringName(node.resolvedPath);
+                return Module.stringName(getResolvedName(node.value));
             
             case "ModulePath":
                 return modulePath(node).slice(0, 1).join("");
@@ -359,18 +381,15 @@ function buildGraph(module) {
         if (node.type === "ModulePath")
             return node.elements.map(e => e.value);
         
-        return [Module.stringName(node.resolvedPath)];
+        return [Module.stringName(getResolvedName(node.value))];
     }
     
     function lookupModule(name) {
     
         var m = module.searchScope(name);
         
-        if (!m) {
-        
-            console.log(module.parent.children.get("M").children);
-            throw new Error("Invalid module reference: " + name);
-        }
+        if (!m)
+            throw new Error(`Invalid module reference: ${name}`);
         
         return m;
     }

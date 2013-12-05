@@ -1,4 +1,4 @@
-import { StringMap } from "StringMap.js";
+import { StringMap } from "package:zen-bits";
 import { BindingMap, REFLEXIVE } from "Binding.js";
 
 export class Module {

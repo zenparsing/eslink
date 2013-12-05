@@ -3,7 +3,7 @@ module Path from "node:path";
 import { Module } from "../src/Module.js";
 import { buildTree } from "../src/TreeBuilder.js";
 import { link } from "../src/Linker.js";
-import { runTests } from "http://jscloud.org/zenparsing/moon-unit-0.1.js";
+import { runTests } from "package:moon-unit";
 
 function compile(path) {
 
@@ -63,6 +63,7 @@ runTests({
         });
     },
     
+    /*
     "Export All"(test) {
     
         return compile("export-all/main.js").then(module => {
@@ -91,6 +92,7 @@ runTests({
             
         });
     },
+    */
     
     "Export Star"(test) {
     
@@ -141,7 +143,7 @@ runTests({
     
     "Export Star Conflict (With Same Target)"(test) {
     
-        test._("export * fails if conflicting names points to the same target.");
+        test._("export * fails if conflicting names point to the same target.");
         
         return compile("export-star-conflict-3/main.js").then(module => {
         
@@ -157,7 +159,11 @@ runTests({
     
         return compile("nested/main.js").then(module => {
         
-            console.log(getBindings(module.exports));
+            test._("exports").equals(getBindings(module.exports), {
+                x: { module: '[nested/main.js].M.N', name: 'x', color: 'GREEN' },
+                y: { module: '[nested/main.js].M.O', name: 'y', color: 'GREEN' }
+            });
+            
         });
     }
 
