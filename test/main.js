@@ -181,7 +181,8 @@ runTests({
                 C: { module: '[var-scope/main.js]', name: 'C', color: 'GREEN' },
                 x3: { module: '[var-scope/main.js]', name: 'x3', color: 'GREEN' },
                 x4: { module: '[var-scope/main.js]', name: 'x4', color: 'GREEN' },
-                x5: { module: '[var-scope/main.js]', name: 'x5', color: 'GREEN' }
+                x5: { module: '[var-scope/main.js]', name: 'x5', color: 'GREEN' },
+                x6: { module: '[var-scope/main.js]', name: 'x6', color: 'GREEN' }
             });
         });
     },

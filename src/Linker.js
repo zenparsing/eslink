@@ -29,6 +29,7 @@ function isVarScope(node) {
 
     switch (node.type) {
     
+        // TODO:  What about function-in-block?
         case "ClassExpression":
         case "ClassBody":
         case "FunctionExpression":
@@ -43,6 +44,9 @@ function isVarScope(node) {
 
 function isLexicalScope(node) {
 
+    if (isVarScope(node))
+        return true;
+    
     switch (node.type) {
     
         case "Block":
