@@ -54,6 +54,7 @@ export function buildTree(startPath) {
                 if (code !== null) {
             
                     node.ast = parseModule(code);
+                    node.source = code;
                     node.dependencies = depMap = analyze(node);
                     
                     depMap.keys().forEach(key => visit(key, base, depMap));
@@ -85,6 +86,7 @@ function analyze(module) {
                 
                 parent = parent.addChild(node.identifier.value);
                 parent.ast = node.body;
+                parent.source = module.source;
                 node = node.body;
                 break;
         

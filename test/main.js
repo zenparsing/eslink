@@ -165,6 +165,25 @@ runTests({
             });
             
         });
-    }
+    },
+    
+    "Variable Scope Detection"(test) {
+    
+        return compile("var-scope/main.js").then(module => {
+        
+            test._("locals").equals(getBindings(module.localBindings), {
+                x1: { module: '[var-scope/main.js]', name: 'x1', color: 'GREEN' },
+                y1: { module: '[var-scope/main.js]', name: 'y1', color: 'GREEN' },
+                z1: { module: '[var-scope/main.js]', name: 'z1', color: 'GREEN' },
+                x2: { module: '[var-scope/main.js]', name: 'x2', color: 'GREEN' },
+                F1: { module: '[var-scope/main.js]', name: 'F1', color: 'GREEN' },
+                F2: { module: '[var-scope/main.js]', name: 'F2', color: 'GREEN' },
+                C: { module: '[var-scope/main.js]', name: 'C', color: 'GREEN' },
+                x3: { module: '[var-scope/main.js]', name: 'x3', color: 'GREEN' },
+                x4: { module: '[var-scope/main.js]', name: 'x4', color: 'GREEN' },
+                x5: { module: '[var-scope/main.js]', name: 'x5', color: 'GREEN' }
+            });
+        });
+    },
 
 });

@@ -41,6 +41,20 @@ function isVarScope(node) {
     return false;
 }
 
+function isLexicalScope(node) {
+
+    switch (node.type) {
+    
+        case "Block":
+        case "ForOfStatement":
+        case "ForInStatement":
+        case "ForStatement":
+            return true;
+    }
+    
+    return false;
+}
+
 export function link(rootModule) {
     
     var redList = [];
@@ -191,13 +205,11 @@ export function link(rootModule) {
         });
         
         // Test for validity
-        /*
         module.localBindings.forEach(binding => {
         
             if (!binding.resolved || binding.color === RED)
                 throw new Error("Unresolved binding.");
         });
-        */
         
         module.children.forEach(finalize);
     }
@@ -324,8 +336,11 @@ function buildGraph(module) {
                 // import x from A.B;
                 break;
             
-            case "Block":
-                topLevel = false;
+            default:
+            
+                if (isLexicalScope(node))
+                    topLevel = false;
+                
                 break;
         }
         
