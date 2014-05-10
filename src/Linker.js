@@ -1,4 +1,3 @@
-import { forEachChild as forEachAST } from "package:es6parse";
 import { Module } from "Module.js";
 
 import {
@@ -296,7 +295,7 @@ function buildGraph(module) {
                     node.specifiers.forEach(spec => {
                     
                         locals.add(spec.local.value).createEdge(
-                            exports.addNew((spec.remote || spec.local).value));
+                            exports.addNew((spec.exported || spec.local).value));
                     });
                 }
                 
@@ -304,10 +303,10 @@ function buildGraph(module) {
                 
             case "ExportDeclaration":
             
-                if (node.binding.type !== "ExportsList") {
+                if (node.declaration.type !== "ExportsList") {
                 
                     // export [declaration];
-                    forEachAST(node, child => visit(child, topLevel, true));
+                    node.children().forEach(child => visit(child, topLevel, true));
                     return;
                 }
                 
@@ -323,9 +322,9 @@ function buildGraph(module) {
                 node.specifiers.forEach(spec => {
                 
                     var importPath = path.slice(1);
-                    importPath.push(spec.remote.value);
+                    importPath.push(spec.imported.value);
                     
-                    var local = locals.addNew((spec.local || spec.remote).value);
+                    var local = locals.addNew((spec.local || spec.imported).value);
                     local.imported = true;
                     
                     binding.createEdge(local, importPath);
@@ -348,7 +347,7 @@ function buildGraph(module) {
                 break;
         }
         
-        forEachAST(node, child => visit(child, topLevel));
+        node.children().forEach(child => visit(child, topLevel));
     }
     
     function getVariables(node, exporting) {
@@ -359,7 +358,7 @@ function buildGraph(module) {
         if (node.type === "Identifier" && node.context === "declaration")
             addTarget(node.value, exporting, { type: "variable" });
         
-        forEachAST(node, c => getVariables(c, exporting));
+        node.children().forEach(c => getVariables(c, exporting));
     }
     
     function addTarget(name, exporting, value) {
@@ -384,7 +383,7 @@ function buildGraph(module) {
             case "Identifier":
                 return node.value;
             
-            case "String":
+            case "StringLiteral":
                 return Module.stringName(getResolvedName(node.value));
             
             case "ModulePath":

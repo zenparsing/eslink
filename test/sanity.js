@@ -1,10 +1,12 @@
-module Path from "node:path";
-module Util from "node:util";
+var Path = require("path");
+var Util = require("util");
 
 import { buildTree } from "../src/TreeBuilder.js";
 import { link } from "../src/Linker.js";
 
-var testModule = Path.resolve(__dirname, "../src/Linker.js");
+var testModule = process.argv[2] ?
+    Path.resolve(process.argv[2]) :
+    Path.resolve(__dirname, "../src/Linker.js");
 
 buildTree(testModule).then(root => {
 
@@ -13,6 +15,7 @@ buildTree(testModule).then(root => {
     link(root);
     listImports(root.searchScope(test));
     listExports(root.searchScope(test));
+    console.log("\n");
 });
 
 function listExports(module) {

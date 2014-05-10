@@ -1,6 +1,6 @@
-module Path from "node:path";
+var Path = require("path");
 
-import { parseModule, forEachChild } from "package:es6parse";
+import { parse } from "package:esparse";
 import { Module } from "Module.js";
 import { isPackageURI, locatePackage } from "PackageLocator.js";
 import { AsyncFS, StringMap, StringSet } from "package:zen-bits";
@@ -53,7 +53,7 @@ export function buildTree(startPath) {
             
                 if (code !== null) {
             
-                    node.ast = parseModule(code);
+                    node.ast = parse(code, { module: true });
                     node.source = code;
                     node.dependencies = depMap = analyze(node);
                     
@@ -106,12 +106,12 @@ function analyze(module) {
                 return;
         }
         
-        forEachChild(node, child => visit(child, parent));
+        node.children().forEach(child => visit(child, parent));
     }
     
     function addEdge(spec) {
     
-        if (!spec || spec.type !== "String")
+        if (!spec || spec.type !== "StringLiteral")
             return;
         
         var path = spec.value;

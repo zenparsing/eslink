@@ -1,4 +1,4 @@
-module Path from "node:path";
+var Path = require("path");
 
 import { AsyncFS } from "package:zen-bits";
 
